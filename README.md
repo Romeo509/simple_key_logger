@@ -7,6 +7,7 @@ This keylogger was built with the `pynput` library and emphasizes responsible us
 
 ## Features
 - Records all keystrokes, including special characters (e.g., `[enter]`, `[back]`, `[esc]`).
+- Tracks active window titles and logs them when the window changes.
 - Preserves case sensitivity (capital and lowercase letters).
 - Moves to the next line if the user is inactive for more than 30 seconds.
 - Ignores arrow keys (up, down, left, right).
@@ -18,3 +19,5 @@ To install the necessary dependencies, follow these steps:
 
 ```bash
 pip install pynput
+pip install pywin32
+python key_logger.py
